@@ -75,6 +75,8 @@
     <Compile Include="Tasks\CatchLurePokemonsTask.cs" />
     <Compile Include="Tasks\CatchNearbyPokemonsTask.cs" />
     <Compile Include="Tasks\CatchPokemonTask.cs" />
+    <Compile Include="Tasks\DisplayItemsTask.cs" />
+    <Compile Include="Tasks\DisplayPlayerStatsTask.cs" />
     <Compile Include="Tasks\DisplayPokemonStatsTask.cs" />
     <Compile Include="Tasks\EvolvePokemonTask.cs" />
     <Compile Include="Event\IEvent.cs" />

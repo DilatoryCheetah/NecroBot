@@ -149,17 +149,18 @@ namespace PoGo.NecroBot.CLI
         }
 
         public double DefaultAltitude = 10;
-        public double DefaultLatitude = 52.379189;
-        public double DefaultLongitude = 4.899431;
+        public double DefaultLatitude = 40.7733702;
+        public double DefaultLongitude = -73.9703051;
         public int DelayBetweenPokemonCatch = 2000;
         public float EvolveAboveIvValue = 95;
-        public bool EvolveAllPokemonAboveIv = false;
+        public bool EvolveAllPokemonAboveIv = true;
         public bool EvolveAllPokemonWithEnoughCandy = false;
         public string GpxFile = "GPXPath.GPX";
-        public int KeepMinCp = 1000;
+        public int KeepMinCp = 1500;
         public int KeepMinDuplicatePokemon = 1;
+        public int KeepMaxDuplicatePokemon = 100;
         public float KeepMinIvPercentage = 85;
-        public bool KeepPokemonsThatCanEvolve = true;
+        public bool KeepPokemonsThatCanEvolve = false;
         public int MaxTravelDistanceInMeters = 1000;
         public bool PrioritizeIvOverCp = true;
         public bool TransferDuplicatePokemon = true;
@@ -167,11 +168,13 @@ namespace PoGo.NecroBot.CLI
         public bool UseLuckyEggsWhileEvolving = false;
         public bool UsePokemonToNotCatchFilter = false;
         public double WalkingSpeedInKilometerPerHour = 50;
-        public int AmountOfPokemonToDisplayOnStart = 10;
-        public bool RenameAboveIv = false;
+        public int AmountOfPokemonToDisplayOnStart = 20;
+        public bool RenameAboveIv = true;
         public bool EnableWebSocket = false;
         public int WebSocketPort = 14561;
-        
+        public bool RecycleItems = false;
+        public bool ExecuteFarming = false;
+
         [JsonIgnore]
         internal AuthSettings Auth = new AuthSettings();
 
@@ -218,6 +221,7 @@ namespace PoGo.NecroBot.CLI
 
         public List<PokemonId> PokemonsNotToTransfer = new List<PokemonId>
                 {
+                    PokemonId.Vaporeon,
                     PokemonId.Dragonite,
                     PokemonId.Charizard,
                     PokemonId.Zapdos,
@@ -283,6 +287,7 @@ namespace PoGo.NecroBot.CLI
         public int DelayBetweenPokemonCatch => _settings.DelayBetweenPokemonCatch;
         public bool UsePokemonToNotCatchFilter => _settings.UsePokemonToNotCatchFilter;
         public int KeepMinDuplicatePokemon => _settings.KeepMinDuplicatePokemon;
+        public int KeepMaxDuplicatePokemon => _settings.KeepMaxDuplicatePokemon;
         public bool PrioritizeIvOverCp => _settings.PrioritizeIvOverCp;
         public int MaxTravelDistanceInMeters => _settings.MaxTravelDistanceInMeters;
         public string GpxFile => _settings.GpxFile;
@@ -292,6 +297,8 @@ namespace PoGo.NecroBot.CLI
         public float EvolveAboveIvValue => _settings.EvolveAboveIvValue;
         public bool RenameAboveIv => _settings.RenameAboveIv;
         public int AmountOfPokemonToDisplayOnStart => _settings.AmountOfPokemonToDisplayOnStart;
+        public bool RecycleItems => _settings.RecycleItems;
+        public bool ExecuteFarming => _settings.ExecuteFarming;
         public ICollection<KeyValuePair<ItemId, int>> ItemRecycleFilter => _settings.ItemRecycleFilter;
         public ICollection<PokemonId> PokemonsToEvolve => _settings.PokemonsToEvolve;
         public ICollection<PokemonId> PokemonsNotToTransfer => _settings.PokemonsNotToTransfer;

@@ -198,6 +198,42 @@ namespace PoGo.NecroBot.Logic
                         });
         }
 
+        public async Task<int> GetMaxItemStorage()
+        {
+            int maxItemStorage = 350;
+            var inventory = await GetCachedInventory();
+            var upgrades = inventory.InventoryDelta.InventoryItems
+                .Select(i => i.InventoryItemData?.InventoryUpgrades)
+                .Where(p => p != null).ToList();
+            foreach (var repeatableUpgrades in upgrades)
+            {
+                var actualUpgrades = repeatableUpgrades.InventoryUpgrades_.Where(i => i.UpgradeType == InventoryUpgradeType.IncreaseItemStorage).ToList();
+                foreach (var upgrade in actualUpgrades)
+                {
+                    maxItemStorage += upgrade.AdditionalStorage;
+                }
+            }
+            return maxItemStorage;
+        }
+
+        public async Task<int> GetMaxPokemonStorage()
+        {
+            int maxPokemonStorage = 350;
+            var inventory = await GetCachedInventory();
+            var upgrades = inventory.InventoryDelta.InventoryItems
+                .Select(i => i.InventoryItemData?.InventoryUpgrades)
+                .Where(p => p != null).ToList();
+            foreach (var repeatableUpgrades in upgrades)
+            {
+                var actualUpgrades = repeatableUpgrades.InventoryUpgrades_.Where(i => i.UpgradeType == InventoryUpgradeType.IncreasePokemonStorage).ToList();
+                foreach (var upgrade in actualUpgrades)
+                {
+                    maxPokemonStorage += upgrade.AdditionalStorage;
+                }
+            }
+            return maxPokemonStorage;
+        }
+
         public async Task<IEnumerable<PlayerStats>> GetPlayerStats()
         {
             var inventory = await GetCachedInventory();
@@ -243,7 +279,7 @@ namespace PoGo.NecroBot.Logic
         public async Task<IEnumerable<PokemonData>> GetPokemonToEvolve(IEnumerable<PokemonId> filter = null)
         {
             var myPokemons = await GetPokemons();
-            myPokemons = myPokemons.Where(p => p.DeployedFortId == string.Empty).OrderByDescending(p => p.Cp);
+            myPokemons = myPokemons.Where(p => p.DeployedFortId == string.Empty).OrderByDescending(PokemonInfo.CalculatePokemonPerfection);
             //Don't evolve pokemon in gyms
             if (filter != null)
             {

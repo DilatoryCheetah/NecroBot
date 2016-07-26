@@ -27,6 +27,16 @@ namespace PoGo.NecroBot.Logic.Tasks
                     $"# CP {pokemon.Cp.ToString().PadLeft(4, ' ')}/{PokemonInfo.CalculateMaxCp(pokemon).ToString().PadLeft(4, ' ')} | ({PokemonInfo.CalculatePokemonPerfection(pokemon).ToString("0.00")}% perfect)\t| Lvl {PokemonInfo.GetLevel(pokemon).ToString("00")}\t NAME: '{pokemon.PokemonId}'",
                     LogLevel.Info, ConsoleColor.Yellow);
             }
+            Logger.Write($"====== DisplayAllPokemon ======", LogLevel.Info, ConsoleColor.Yellow);
+            var pokemons = ctx.Inventory.GetPokemons().Result.OrderBy(x => x.PokemonId.ToString()).ThenByDescending(PokemonInfo.CalculatePokemonPerfection).ThenByDescending(x => x.Cp);
+
+            foreach (var pokemon in pokemons)
+            {
+                Logger.Write($"# {pokemon.PokemonId.ToString().PadRight(15, ' ')} | Lvl {PokemonInfo.GetLevel(pokemon),2:#0} | CP {pokemon.Cp,4:###0}/{PokemonInfo.CalculateMaxCp(pokemon),4:###0} | IV {PokemonInfo.CalculatePokemonPerfection(pokemon),6:##0.00}% [{pokemon.IndividualAttack,2:#0}/{pokemon.IndividualDefense,2:#0}/{pokemon.IndividualStamina,2:#0}] | {pokemon.Nickname}",
+                    LogLevel.Info, ConsoleColor.Yellow);
+            }
+            int maxPokemonStorage = ctx.Inventory.GetMaxPokemonStorage().Result;
+            Logger.Write($"Total number of Pokemon in inventory: {pokemons.Count(),4:###0}/{maxPokemonStorage,4:###0}", LogLevel.Info, ConsoleColor.Yellow);
         }
     }
 }

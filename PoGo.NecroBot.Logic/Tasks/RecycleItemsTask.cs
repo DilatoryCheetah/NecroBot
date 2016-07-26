@@ -14,16 +14,19 @@ namespace PoGo.NecroBot.Logic.Tasks
         {
             var items = ctx.Inventory.GetItemsToRecycle(ctx.Settings).Result;
 
-            foreach (var item in items)
+            if (ctx.LogicSettings.RecycleItems)
             {
-                ctx.Client.Inventory.RecycleItem(item.ItemId, item.Count).Wait();
+                foreach (var item in items)
+                {
+                    ctx.Client.Inventory.RecycleItem(item.ItemId, item.Count).Wait();
 
-                machine.Fire(new ItemRecycledEvent {Id = item.ItemId, Count = item.Count});
+                    machine.Fire(new ItemRecycledEvent { Id = item.ItemId, Count = item.Count });
 
-                Thread.Sleep(500);
+                    Thread.Sleep(500);
+                }
+
+                ctx.Inventory.RefreshCachedInventory().Wait();
             }
-
-            ctx.Inventory.RefreshCachedInventory().Wait();
         }
     }
 }

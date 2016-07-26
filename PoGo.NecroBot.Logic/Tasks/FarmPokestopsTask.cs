@@ -96,7 +96,8 @@ namespace PoGo.NecroBot.Logic.Tasks
 
 
                 Thread.Sleep(1000);
-                if (++stopsHit%5 == 0) //TODO: OR item/pokemon bag is full
+                var rnd = new Random();
+                if (++stopsHit%5 == 0 && rnd.Next(0, 3) == 0) //TODO: OR item/pokemon bag is full
                 {
                     stopsHit = 0;
                     if (fortSearch.ItemsAwarded.Count > 0)

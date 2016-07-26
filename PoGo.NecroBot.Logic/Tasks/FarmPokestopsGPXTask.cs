@@ -88,17 +88,21 @@ namespace PoGo.NecroBot.Logic.Tasks
 
                             Thread.Sleep(1000);
 
-                            RecycleItemsTask.Execute(ctx, machine);
-
-                            if (ctx.LogicSettings.EvolveAllPokemonWithEnoughCandy ||
-                                ctx.LogicSettings.EvolveAllPokemonAboveIv)
+                            var rnd = new Random();
+                            if (rnd.Next(0, 15) == 0) //TODO: OR item/pokemon bag is full
                             {
-                                EvolvePokemonTask.Execute(ctx, machine);
-                            }
+                                RecycleItemsTask.Execute(ctx, machine);
 
-                            if (ctx.LogicSettings.TransferDuplicatePokemon)
-                            {
-                                TransferDuplicatePokemonTask.Execute(ctx, machine);
+                                if (ctx.LogicSettings.EvolveAllPokemonWithEnoughCandy ||
+                                    ctx.LogicSettings.EvolveAllPokemonAboveIv)
+                                {
+                                    EvolvePokemonTask.Execute(ctx, machine);
+                                }
+
+                                if (ctx.LogicSettings.TransferDuplicatePokemon)
+                                {
+                                    TransferDuplicatePokemonTask.Execute(ctx, machine);
+                                }
                             }
                         }
 

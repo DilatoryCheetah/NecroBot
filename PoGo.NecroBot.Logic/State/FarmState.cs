@@ -10,10 +10,6 @@ namespace PoGo.NecroBot.Logic.State
     {
         public IState Execute(Context ctx, StateMachine machine)
         {
-            RenamePokemonTask.Execute(ctx, machine);
-
-            DisplayPokemonStatsTask.Execute(ctx, machine);
-
             if (ctx.LogicSettings.EvolveAllPokemonAboveIv || ctx.LogicSettings.EvolveAllPokemonWithEnoughCandy)
             {
                 EvolvePokemonTask.Execute(ctx, machine);
@@ -26,14 +22,25 @@ namespace PoGo.NecroBot.Logic.State
 
             RecycleItemsTask.Execute(ctx, machine);
 
-            if (ctx.LogicSettings.UseGpxPathing)
-            {
-                FarmPokestopsGpxTask.Execute(ctx, machine);
-            }
-            else
-            {
-                FarmPokestopsTask.Execute(ctx, machine);
-            }
+            ctx.Inventory.RefreshCachedInventory().Wait();
+
+            RenamePokemonTask.Execute(ctx, machine);
+
+            DisplayPokemonStatsTask.Execute(ctx, machine);
+
+            DisplayItemsTask.Execute(ctx, machine);
+
+            DisplayPlayerStatsTask.Execute(ctx, machine);
+
+            if (ctx.LogicSettings.ExecuteFarming)
+                if (ctx.LogicSettings.UseGpxPathing)
+                {
+                    FarmPokestopsGpxTask.Execute(ctx, machine);
+                }
+                else
+                {
+                    FarmPokestopsTask.Execute(ctx, machine);
+                }
 
             machine.RequestDelay(10000);
 

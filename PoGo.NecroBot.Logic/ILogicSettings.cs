@@ -19,6 +19,7 @@ namespace PoGo.NecroBot.Logic
         int DelayBetweenPokemonCatch { get; }
         bool UsePokemonToNotCatchFilter { get; }
         int KeepMinDuplicatePokemon { get; }
+        int KeepMaxDuplicatePokemon { get; }
         bool PrioritizeIvOverCp { get; }
         int MaxTravelDistanceInMeters { get; }
         bool UseGpxPathing { get; }
@@ -28,6 +29,8 @@ namespace PoGo.NecroBot.Logic
         float EvolveAboveIvValue { get; }
         bool RenameAboveIv { get; }
         int AmountOfPokemonToDisplayOnStart { get; }
+        bool RecycleItems { get; }
+        bool ExecuteFarming { get; }
 
         ICollection<KeyValuePair<ItemId, int>> ItemRecycleFilter { get; }
 

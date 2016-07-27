@@ -70,16 +70,21 @@ namespace PoGo.NecroBot.CLI
                 : ctx.Translations.GetTranslation(TranslationString.IncubatorStatusUpdate, evt.KmRemaining));
         }
 
+        public void HandleEvent(EggHatchedEvent evt, Context ctx)
+        {
+            Logger.Write(ctx.Translations.GetTranslation(TranslationString.IncubatorEggHatched, evt.PokemonId.ToString()));
+        }
+
         public void HandleEvent(FortUsedEvent evt, Context ctx)
         {
             Logger.Write(
-                ctx.Translations.GetTranslation(TranslationString.EventFortUsed, evt.Exp, evt.Gems, evt.Items),
+                ctx.Translations.GetTranslation(TranslationString.EventFortUsed, evt.Name, evt.Exp, evt.Gems, evt.Items),
                 LogLevel.Pokestop);
         }
 
         public void HandleEvent(FortFailedEvent evt, Context ctx)
         {
-            Logger.Write(ctx.Translations.GetTranslation(TranslationString.EventFortFailed, evt.Retry, evt.Max),
+            Logger.Write(ctx.Translations.GetTranslation(TranslationString.EventFortFailed, evt.Name, evt.Try, evt.Max),
                 LogLevel.Pokestop, ConsoleColor.DarkRed);
         }
 
@@ -105,7 +110,7 @@ namespace PoGo.NecroBot.CLI
                     case ItemId.ItemMasterBall:
                         return ctx.Translations.GetTranslation(TranslationString.MasterPokeball);
                     default:
-                        return "Unknown";
+                        return ctx.Translations.GetTranslation(TranslationString.CommonWordUnknown);
                 }
             };
 

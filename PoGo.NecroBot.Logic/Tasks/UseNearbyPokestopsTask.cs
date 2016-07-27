@@ -45,11 +45,11 @@ namespace PoGo.NecroBot.Logic.Tasks
                     {
                         Exp = fortSearch.ExperienceAwarded,
                         Gems = fortSearch.GemsAwarded,
-                        Items = StringUtils.GetSummedFriendlyNameOfItemAwardList(fortSearch.ItemsAwarded)
+                        Items = StringUtils.GetSummedFriendlyNameOfItemAwardList(fortSearch.ItemsAwarded),
+                        Latitude = pokeStop.Latitude,
+                        Longitude = pokeStop.Longitude
                     });
                 }
-
-                await Task.Delay(1000);
 
                 await RecycleItemsTask.Execute(ctx, machine);
 

@@ -45,8 +45,7 @@ namespace PoGo.NecroBot.Logic.Tasks
                         {
                             machine.Fire(new ErrorEvent
                             {
-                                Message =
-                                    $"Your desired destination of {nextPoint.Lat}, {nextPoint.Lon} is too far from your current position of {ctx.Client.CurrentLatitude}, {ctx.Client.CurrentLongitude}"
+                                Message = ctx.Translations.GetTranslation(Common.TranslationString.DesiredDestTooFar, nextPoint.Lat, nextPoint.Lon, ctx.Client.CurrentLatitude, ctx.Client.CurrentLongitude)
                             });
                             break;
                         }
@@ -80,7 +79,9 @@ namespace PoGo.NecroBot.Logic.Tasks
                                 {
                                     Exp = fortSearch.ExperienceAwarded,
                                     Gems = fortSearch.GemsAwarded,
-                                    Items = StringUtils.GetSummedFriendlyNameOfItemAwardList(fortSearch.ItemsAwarded)
+                                    Items = StringUtils.GetSummedFriendlyNameOfItemAwardList(fortSearch.ItemsAwarded),
+                                    Latitude = pokeStop.Latitude,
+                                    Longitude = pokeStop.Longitude
                                 });
                             }
                             if (fortSearch.ItemsAwarded.Count > 0)
@@ -88,9 +89,12 @@ namespace PoGo.NecroBot.Logic.Tasks
                                 await ctx.Inventory.RefreshCachedInventory();
                             }
 
-                            await Task.Delay(1000);
-
                             await RecycleItemsTask.Execute(ctx, machine);
+
+                            if (ctx.LogicSettings.UseEggIncubators)
+                            {
+                                await UseIncubatorsTask.Execute(ctx, machine);
+                            }
 
                             if (ctx.LogicSettings.EvolveAllPokemonWithEnoughCandy ||
                                 ctx.LogicSettings.EvolveAllPokemonAboveIv)

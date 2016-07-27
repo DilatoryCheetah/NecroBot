@@ -21,7 +21,9 @@ namespace PoGo.NecroBot.CLI
     {
         public AuthSettings()
         {
-            if (File.Exists(Directory.GetCurrentDirectory() + "\\config\\auth.json")) return;
+            if (File.Exists(Directory.GetCurrentDirectory() 
+                + Path.DirectorySeparatorChar +"config"
+                + Path.DirectorySeparatorChar + "auth.json")) return;
             string type;
             do
             {
@@ -35,7 +37,7 @@ namespace PoGo.NecroBot.CLI
             {
                 Console.Clear();
                 return;
-            }               
+            }
             do
             {
                 Console.WriteLine("Username:");
@@ -52,7 +54,7 @@ namespace PoGo.NecroBot.CLI
         public string GoogleRefreshToken;
         public string PtcUsername;
         public string PtcPassword;
-        
+
 
         [JsonIgnore]
         private string FilePath;
@@ -92,7 +94,7 @@ namespace PoGo.NecroBot.CLI
 
         public void Save()
         {
-            if(!string.IsNullOrEmpty(FilePath))
+            if (!string.IsNullOrEmpty(FilePath))
             {
                 Save(FilePath);
             }
@@ -108,9 +110,9 @@ namespace PoGo.NecroBot.CLI
         public static GlobalSettings Load(string path)
         {
             ProfilePath = Directory.GetCurrentDirectory() + path;
-            ConfigPath = ProfilePath + "\\config";
+            ConfigPath = ProfilePath + Path.DirectorySeparatorChar + "config";
 
-            var fullPath = ConfigPath + "\\config.json";
+            var fullPath = ConfigPath + Path.DirectorySeparatorChar + "config.json";
 
             GlobalSettings settings = null;
             if (File.Exists(fullPath))
@@ -129,8 +131,14 @@ namespace PoGo.NecroBot.CLI
             {
                 settings = new GlobalSettings();
             }
+
+            if (settings.WebSocketPort == 0)
+            {
+                settings.WebSocketPort = 14251;
+            }
+
             settings.Save(fullPath);
-            settings.Auth.Load(ConfigPath + "\\auth.json");
+            settings.Auth.Load(ConfigPath + Path.DirectorySeparatorChar + "auth.json");
 
             return settings;
         }
@@ -148,6 +156,8 @@ namespace PoGo.NecroBot.CLI
             File.WriteAllText(fullPath, output);
         }
 
+        public bool AutoUpdate = false;
+        public string TranslationLanguageCode = "en";
         public double DefaultAltitude = 10;
         public double DefaultLatitude = 40.7733702;
         public double DefaultLongitude = -73.9703051;
@@ -171,7 +181,7 @@ namespace PoGo.NecroBot.CLI
         public int AmountOfPokemonToDisplayOnStart = 20;
         public bool RenameAboveIv = true;
         public bool EnableWebSocket = false;
-        public int WebSocketPort = 14561;
+        public int WebSocketPort = 14251;
         public bool RecycleItems = false;
         public bool ExecuteFarming = false;
 
@@ -277,7 +287,7 @@ namespace PoGo.NecroBot.CLI
         {
             _settings = settings;
         }
-
+        public bool AutoUpdate => _settings.AutoUpdate;
         public float KeepMinIvPercentage => _settings.KeepMinIvPercentage;
         public int KeepMinCp => _settings.KeepMinCp;
         public double WalkingSpeedInKilometerPerHour => _settings.WalkingSpeedInKilometerPerHour;
@@ -299,6 +309,7 @@ namespace PoGo.NecroBot.CLI
         public int AmountOfPokemonToDisplayOnStart => _settings.AmountOfPokemonToDisplayOnStart;
         public bool RecycleItems => _settings.RecycleItems;
         public bool ExecuteFarming => _settings.ExecuteFarming;
+        public string TranslationLanguageCode => _settings.TranslationLanguageCode;
         public ICollection<KeyValuePair<ItemId, int>> ItemRecycleFilter => _settings.ItemRecycleFilter;
         public ICollection<PokemonId> PokemonsToEvolve => _settings.PokemonsToEvolve;
         public ICollection<PokemonId> PokemonsNotToTransfer => _settings.PokemonsNotToTransfer;

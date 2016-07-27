@@ -2,6 +2,7 @@
 using PoGo.NecroBot.Logic.Event;
 using PoGo.NecroBot.Logic.State;
 using SuperSocket.SocketBase;
+using SuperSocket.SocketBase.Config;
 using SuperSocket.WebSocket;
 using System;
 using System.Collections.Generic;
@@ -14,11 +15,27 @@ namespace PoGo.NecroBot.CLI
     public class WebSocketInterface
     {
         private WebSocketServer _server;
+        private PokeStopListEvent _lastPokeStopList = null;
+        private ProfileEvent _lastProfile = null;
 
         public WebSocketInterface(int port)
         {
             _server = new WebSocketServer();
-            if(_server.Setup(port) == false)
+            bool setupComplete = _server.Setup(new ServerConfig
+            {
+                Name = "NecroWebSocket",
+                Ip = "Any",
+                Port = port,
+                Mode = SocketMode.Tcp,
+                Security = "tls",
+                Certificate = new CertificateConfig
+                {
+                    FilePath = @"cert.pfx",
+                    Password = "necro"
+                }
+            });
+
+            if(setupComplete == false)
             {
                 Logic.Logging.Logger.Write($"Failed to start WebSocketServer on port : {port}", Logic.Logging.LogLevel.Error);
                 return;
@@ -37,6 +54,11 @@ namespace PoGo.NecroBot.CLI
 
         private void HandleSession(WebSocketSession session)
         {
+            if(_lastProfile != null)
+                session.Send(Serialize(_lastProfile));
+
+            if(_lastPokeStopList != null)
+                session.Send(Serialize(_lastPokeStopList));
         }
 
         private void Broadcast(string message)
@@ -51,16 +73,37 @@ namespace PoGo.NecroBot.CLI
             }
         }
 
-        public void Listen(IEvent evt, Context ctx)
+        private void HandleEvent(PokeStopListEvent evt)
         {
-            dynamic eve = evt;
+            _lastPokeStopList = evt;
+        }
 
+        private void HandleEvent(ProfileEvent evt)
+        {
+            _lastProfile = evt;
+        }
+
+        private string Serialize(dynamic evt)
+        {
             var jsonSerializerSettings = new JsonSerializerSettings()
             {
                 TypeNameHandling = TypeNameHandling.All
             };
 
-            Broadcast(JsonConvert.SerializeObject(eve, Formatting.None, jsonSerializerSettings));
+            return JsonConvert.SerializeObject(evt, Formatting.None, jsonSerializerSettings);
+        }
+
+        public void Listen(IEvent evt, Context ctx)
+        {
+            dynamic eve = evt;
+
+            try
+            {
+                HandleEvent(eve);
+            }
+            catch { }
+
+            Broadcast(Serialize(eve));
         }
     }
 }

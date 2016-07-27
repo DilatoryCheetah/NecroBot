@@ -11,10 +11,10 @@ namespace PoGo.NecroBot.Logic.Tasks
 {
     public class DisplayPlayerStatsTask
     {
-        public static void Execute(Context ctx, StateMachine machine)
+        public static async Task Execute(Context ctx, StateMachine machine)
         {
             Logger.Write($"====== DisplayPlayerStats ======", LogLevel.Info, ConsoleColor.Yellow);
-            var myPlayerStats = ctx.Inventory.GetPlayerStats().Result;
+            var myPlayerStats = await ctx.Inventory.GetPlayerStats();
 
             foreach (var playerStat in myPlayerStats)
             {

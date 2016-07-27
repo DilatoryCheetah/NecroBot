@@ -11,10 +11,10 @@ namespace PoGo.NecroBot.Logic.Tasks
 {
     public class DisplayItemsTask
     {
-        public static void Execute(Context ctx, StateMachine machine)
+        public static async Task Execute(Context ctx, StateMachine machine)
         {
             Logger.Write($"====== DisplayAllItems ======", LogLevel.Info, ConsoleColor.Yellow);
-            var myItems = ctx.Inventory.GetItems().Result;
+            var myItems = await ctx.Inventory.GetItems();
 
             int totalItemCount = 0;
             foreach (var item in myItems)
@@ -23,7 +23,7 @@ namespace PoGo.NecroBot.Logic.Tasks
                 Logger.Write($"# Count {item.Count,3:##0} | {item.ItemId.ToString()}",
                     LogLevel.Info, ConsoleColor.Yellow);
             }
-            int maxItemStorage = ctx.Inventory.GetMaxItemStorage().Result;
+            int maxItemStorage = await ctx.Inventory.GetMaxItemStorage();
             Logger.Write($"Total number of Items in inventory: {totalItemCount,4:###0}/{maxItemStorage,4:###0}", LogLevel.Info, ConsoleColor.Yellow);
         }
     }

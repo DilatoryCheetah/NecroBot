@@ -27,10 +27,9 @@ namespace PoGo.NecroBot.Logic.Tasks
                 }
 
                 await ctx.Inventory.RefreshCachedInventory();
-            }
+
                 await Task.Delay(500);
             }
-
         }
     }
 }

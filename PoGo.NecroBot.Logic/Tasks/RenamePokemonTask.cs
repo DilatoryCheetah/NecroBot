@@ -13,6 +13,8 @@ namespace PoGo.NecroBot.Logic.Tasks
     {
         public static async Task Execute(Context ctx, StateMachine machine)
         {
+            await ctx.Inventory.RefreshCachedInventory();
+
             var pokemons = await ctx.Inventory.GetPokemons();
 
             foreach (var pokemon in pokemons)
@@ -25,7 +27,20 @@ namespace PoGo.NecroBot.Logic.Tasks
                 }
                 var newNickname = $"{pokemonName}_{perfection}";
 
-                if (perfection > ctx.LogicSettings.KeepMinIvPercentage && newNickname != pokemon.Nickname && ctx.LogicSettings.RenameAboveIv)
+                if (pokemon.PokemonId == POGOProtos.Enums.PokemonId.Eevee)
+                {
+                     if (pokemon.Nickname != "Rainer")
+                    {
+                        // Always rename Eevee to Rainer to force an evolution to Vaporeon
+                        var result = await ctx.Client.Inventory.NicknamePokemon(pokemon.Id, "Rainer");
+
+                        machine.Fire(new NoticeEvent
+                        {
+                            Message = $"Pokemon {pokemon.PokemonId} ({pokemon.Id}) renamed from {pokemon.Nickname} to Rainer."
+                        });
+                    }
+                }
+                else if (perfection > ctx.LogicSettings.KeepMinIvPercentage && newNickname != pokemon.Nickname && ctx.LogicSettings.RenameAboveIv)
                 {
                     var result = await ctx.Client.Inventory.NicknamePokemon(pokemon.Id, newNickname);
 
@@ -45,6 +60,7 @@ namespace PoGo.NecroBot.Logic.Tasks
                 }
             }
 
+            await ctx.Inventory.RefreshCachedInventory();
         }
     }
 }

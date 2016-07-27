@@ -218,7 +218,7 @@ namespace PoGo.NecroBot.Logic
 
         public async Task<int> GetMaxPokemonStorage()
         {
-            int maxPokemonStorage = 350;
+            int maxPokemonStorage = 250;
             var inventory = await GetCachedInventory();
             var upgrades = inventory.InventoryDelta.InventoryItems
                 .Select(i => i.InventoryItemData?.InventoryUpgrades)

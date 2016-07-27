@@ -99,6 +99,10 @@ namespace PoGo.NecroBot.Logic.Tasks
                     {
                         evt.FamilyCandies = caughtPokemonResponse.CaptureAward.Candy.Sum();
                     }
+
+                    // Rename Eevee to Rainer
+                    if (pokemon.PokemonId == POGOProtos.Enums.PokemonId.Eevee)
+                        await RenamePokemonTask.Execute(ctx, machine);
                 }
 
 

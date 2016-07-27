@@ -13,6 +13,8 @@ namespace PoGo.NecroBot.Logic.Tasks
     {
         public static async Task Execute(Context ctx, StateMachine machine)
         {
+            await RenamePokemonTask.Execute(ctx, machine);
+
             Logger.Write("====== DisplayHighestsCP ======", LogLevel.Info, ConsoleColor.Yellow);
             var highestsPokemonCp = await ctx.Inventory.GetHighestsCp(20);
             foreach (var pokemon in highestsPokemonCp)

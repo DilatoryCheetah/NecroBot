@@ -25,6 +25,11 @@ namespace PoGo.NecroBot.Logic.State
                 await TransferDuplicatePokemonTask.Execute(ctx, machine);
             }
 
+            if (ctx.LogicSettings.RenameAboveIv)
+            {
+                await RenamePokemonTask.Execute(ctx, machine);
+            }
+
             await RecycleItemsTask.Execute(ctx, machine);
 
             await DisplayPokemonStatsTask.Execute(ctx, machine);

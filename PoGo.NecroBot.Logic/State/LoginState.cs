@@ -1,5 +1,8 @@
 ﻿#region using directives
 
+using System;
+using System.Threading.Tasks;
+using PoGo.NecroBot.Logic.Common;
 using PoGo.NecroBot.Logic.Event;
 using PokemonGo.RocketAPI.Enums;
 using PokemonGo.RocketAPI.Exceptions;
@@ -10,48 +13,106 @@ namespace PoGo.NecroBot.Logic.State
 {
     public class LoginState : IState
     {
-        public IState Execute(Context ctx, StateMachine machine)
+        public async Task<IState> Execute(ISession session)
         {
+            session.EventDispatcher.Send(new NoticeEvent
+            {
+                Message = session.Translation.GetTranslation(TranslationString.LoggingIn, session.Settings.AuthType)
+            });
+            await CheckLogin(session);
             try
             {
-                switch (ctx.Settings.AuthType)
+                switch (session.Settings.AuthType)
                 {
                     case AuthType.Ptc:
-                        ctx.Client.Login.DoPtcLogin(ctx.Settings.PtcUsername, ctx.Settings.PtcPassword).Wait();
+                        try
+                        {
+                            await session.Client.Login.DoPtcLogin(session.Settings.PtcUsername, session.Settings.PtcPassword);
+                        }
+                        catch (AggregateException ae)
+                        {
+                            throw ae.Flatten().InnerException;
+                        }
                         break;
                     case AuthType.Google:
-                        ctx.Client.Login.DoGoogleLogin().Wait();
+                        await session.Client.Login.DoGoogleLogin(session.Settings.GoogleUsername, session.Settings.GooglePassword);
                         break;
                     default:
-                        machine.Fire(new ErrorEvent {Message = "wrong AuthType"});
+                        session.EventDispatcher.Send(new ErrorEvent { Message = session.Translation.GetTranslation(Common.TranslationString.WrongAuthType) });
                         return null;
                 }
             }
             catch (PtcOfflineException)
             {
-                machine.Fire(new ErrorEvent
+                session.EventDispatcher.Send(new ErrorEvent
                 {
-                    Message = "PTC Servers are probably down OR your credentials are wrong. Try google"
+                    Message = session.Translation.GetTranslation(TranslationString.PtcOffline)
                 });
-                machine.Fire(new NoticeEvent {Message = "Trying again in 20 seconds..."});
-                machine.RequestDelay(20000);
+                session.EventDispatcher.Send(new NoticeEvent { Message = session.Translation.GetTranslation(TranslationString.TryingAgainIn, 20) });
+                await Task.Delay(20000);
                 return this;
             }
             catch (AccountNotVerifiedException)
             {
-                machine.Fire(new ErrorEvent {Message = "Account not verified. - Exiting"});
-                return null;
+                session.EventDispatcher.Send(new ErrorEvent { Message = session.Translation.GetTranslation(TranslationString.AccountNotVerified) });
+                await Task.Delay(2000);
+                Environment.Exit(0);
+            }
+            catch (GoogleException e)
+            {
+                if (e.Message.Contains("NeedsBrowser"))
+                {
+                    session.EventDispatcher.Send(new ErrorEvent { Message = session.Translation.GetTranslation(TranslationString.GoogleTwoFactorAuth) });
+                    session.EventDispatcher.Send(new ErrorEvent { Message = session.Translation.GetTranslation(TranslationString.GoogleTwoFactorAuthExplanation) });
+                    await Task.Delay(7000);
+                    try
+                    {
+                        System.Diagnostics.Process.Start("https://security.google.com/settings/security/apppasswords");
+                    }
+                    catch (Exception)
+                    {
+                        session.EventDispatcher.Send(new ErrorEvent { Message = "https://security.google.com/settings/security/apppasswords" });
+                        throw;
+                    }
+                }
+                session.EventDispatcher.Send(new ErrorEvent { Message = session.Translation.GetTranslation(TranslationString.GoogleError) });
+                await Task.Delay(2000);
+                Environment.Exit(0);
             }
 
-            DownloadProfile(ctx, machine);
+            await DownloadProfile(session);
 
             return new PositionCheckState();
         }
 
-        public void DownloadProfile(Context ctx, StateMachine machine)
+        private static async Task CheckLogin(ISession session)
         {
-            ctx.Profile = ctx.Client.Player.GetPlayer().Result;
-            machine.Fire(new ProfileEvent {Profile = ctx.Profile});
+            if (session.Settings.AuthType == AuthType.Google &&
+                            (session.Settings.GoogleUsername == null || session.Settings.GooglePassword == null))
+            {
+                session.EventDispatcher.Send(new ErrorEvent
+                {
+                    Message = session.Translation.GetTranslation(TranslationString.MissingCredentialsGoogle)
+                });
+                await Task.Delay(2000);
+                Environment.Exit(0);
+            }
+            else if (session.Settings.AuthType == AuthType.Ptc &&
+                     (session.Settings.PtcUsername == null || session.Settings.PtcPassword == null))
+            {
+                session.EventDispatcher.Send(new ErrorEvent
+                {
+                    Message = session.Translation.GetTranslation(TranslationString.MissingCredentialsPtc)
+                });
+                await Task.Delay(2000);
+                Environment.Exit(0);
+            }
+        }
+
+        public async Task DownloadProfile(ISession session)
+        {
+            session.Profile = await session.Client.Player.GetPlayer();
+            session.EventDispatcher.Send(new ProfileEvent {Profile = session.Profile});
         }
     }
 }

@@ -1,8 +1,11 @@
 ﻿#region using directives
 
+using System.Linq;
+using System.Threading.Tasks;
 using PoGo.NecroBot.Logic.Event;
 using PoGo.NecroBot.Logic.PoGoUtils;
 using PoGo.NecroBot.Logic.State;
+using PoGo.NecroBot.Logic.Utils;
 
 #endregion
 
@@ -10,38 +13,49 @@ namespace PoGo.NecroBot.Logic.Tasks
 {
     public class TransferDuplicatePokemonTask
     {
-        public static void Execute(Context ctx, StateMachine machine)
+        public static async Task Execute(ISession session)
         {
             var duplicatePokemons =
-                ctx.Inventory.GetDuplicatePokemonToTransfer(ctx.LogicSettings.KeepPokemonsThatCanEvolve, ctx.LogicSettings.PrioritizeIvOverCp,
-                    ctx.LogicSettings.PokemonsNotToTransfer).Result;
+                await
+                    session.Inventory.GetDuplicatePokemonToTransfer(session.LogicSettings.KeepPokemonsThatCanEvolve,
+                        session.LogicSettings.PrioritizeIvOverCp,
+                        session.LogicSettings.PokemonsNotToTransfer);
+
+            var pokemonSettings = await session.Inventory.GetPokemonSettings();
+            var pokemonFamilies = await session.Inventory.GetPokemonFamilies();
 
             foreach (var duplicatePokemon in duplicatePokemons)
             {
-                if (duplicatePokemon.Cp >= ctx.LogicSettings.KeepMinCp ||
-                    PokemonInfo.CalculatePokemonPerfection(duplicatePokemon) > ctx.LogicSettings.KeepMinIvPercentage)
+                if (duplicatePokemon.Cp >= session.Inventory.GetPokemonTransferFilter(duplicatePokemon.PokemonId).KeepMinCp ||
+                    PokemonInfo.CalculatePokemonPerfection(duplicatePokemon) >
+                    session.Inventory.GetPokemonTransferFilter(duplicatePokemon.PokemonId).KeepMinIvPercentage)
                 {
                     continue;
                 }
 
-                ctx.Client.Inventory.TransferPokemon(duplicatePokemon.Id).Wait();
-                ctx.Inventory.DeletePokemonFromInvById(duplicatePokemon.Id);
+                await session.Client.Inventory.TransferPokemon(duplicatePokemon.Id);
+                await session.Inventory.DeletePokemonFromInvById(duplicatePokemon.Id);
 
-                var bestPokemonOfType = ctx.LogicSettings.PrioritizeIvOverCp
-                    ? ctx.Inventory.GetHighestPokemonOfTypeByIv(duplicatePokemon).Result
-                    : ctx.Inventory.GetHighestPokemonOfTypeByCp(duplicatePokemon).Result;
+                var bestPokemonOfType = (session.LogicSettings.PrioritizeIvOverCp
+                    ? await session.Inventory.GetHighestPokemonOfTypeByIv(duplicatePokemon)
+                    : await session.Inventory.GetHighestPokemonOfTypeByCp(duplicatePokemon)) ?? duplicatePokemon;
 
-                if (bestPokemonOfType == null)
-                    bestPokemonOfType = duplicatePokemon;
+                var setting = pokemonSettings.Single(q => q.PokemonId == duplicatePokemon.PokemonId);
+                var family = pokemonFamilies.First(q => q.FamilyId == setting.FamilyId);
 
-                machine.Fire(new TransferPokemonEvent
+                family.Candy++;
+
+                session.EventDispatcher.Send(new TransferPokemonEvent
                 {
                     Id = duplicatePokemon.PokemonId,
                     Perfection = PokemonInfo.CalculatePokemonPerfection(duplicatePokemon),
                     Cp = duplicatePokemon.Cp,
                     BestCp = bestPokemonOfType.Cp,
-                    BestPerfection = PokemonInfo.CalculatePokemonPerfection(bestPokemonOfType)
+                    BestPerfection = PokemonInfo.CalculatePokemonPerfection(bestPokemonOfType),
+                    FamilyCandies = family.Candy
                 });
+
+                DelayingUtils.Delay(session.LogicSettings.DelayBetweenPlayerActions, 0);
             }
         }
     }

@@ -2,15 +2,17 @@
 
 using System;
 using System.Collections.Generic;
-using System.Device.Location;
 using System.Linq;
-using System.Threading;
+using System.Threading.Tasks;
+using GeoCoordinatePortable;
+using PoGo.NecroBot.Logic.Common;
 using PoGo.NecroBot.Logic.Event;
 using PoGo.NecroBot.Logic.Logging;
 using PoGo.NecroBot.Logic.State;
 using PoGo.NecroBot.Logic.Utils;
 using PokemonGo.RocketAPI.Extensions;
 using POGOProtos.Map.Fort;
+using POGOProtos.Networking.Responses;
 
 #endregion
 
@@ -18,35 +20,42 @@ namespace PoGo.NecroBot.Logic.Tasks
 {
     public static class FarmPokestopsTask
     {
-        public static void Execute(Context ctx, StateMachine machine)
+        public static int TimesZeroXPawarded;
+
+        public static async Task Execute(ISession session)
         {
             var distanceFromStart = LocationUtils.CalculateDistanceInMeters(
-                ctx.Settings.DefaultLatitude, ctx.Settings.DefaultLongitude,
-                ctx.Client.CurrentLatitude, ctx.Client.CurrentLongitude);
+                session.Settings.DefaultLatitude, session.Settings.DefaultLongitude,
+                session.Client.CurrentLatitude, session.Client.CurrentLongitude);
 
             // Edge case for when the client somehow ends up outside the defined radius
-            if (ctx.LogicSettings.MaxTravelDistanceInMeters != 0 &&
-                distanceFromStart > ctx.LogicSettings.MaxTravelDistanceInMeters)
+            if (session.LogicSettings.MaxTravelDistanceInMeters != 0 &&
+                distanceFromStart > session.LogicSettings.MaxTravelDistanceInMeters)
             {
                 Logger.Write(
-                    $"You're outside of your defined radius! Walking to start ({distanceFromStart}m away) in 5 seconds. Is your Coords.ini file correct?",
+                    session.Translation.GetTranslation(TranslationString.FarmPokestopsOutsideRadius, distanceFromStart),
                     LogLevel.Warning);
 
-                Thread.Sleep(5000);
+                await Task.Delay(1000);
 
-                ctx.Navigation.HumanLikeWalking(
-                    new GeoCoordinate(ctx.Settings.DefaultLatitude, ctx.Settings.DefaultLongitude),
-                    ctx.LogicSettings.WalkingSpeedInKilometerPerHour, null).Wait();
+                await session.Navigation.HumanLikeWalking(
+                    new GeoCoordinate(session.Settings.DefaultLatitude, session.Settings.DefaultLongitude),
+                    session.LogicSettings.WalkingSpeedInKilometerPerHour, null);
             }
 
-            var pokestopList = GetPokeStops(ctx);
+            var pokestopList = await GetPokeStops(session);
             var stopsHit = 0;
+            var eggWalker = new EggWalker(1000, session);
 
             if (pokestopList.Count <= 0)
             {
-                Logger.Write("No usable PokeStops found in your area. Is your maximum distance too small?",
-                    LogLevel.Warning);
+                session.EventDispatcher.Send(new WarnEvent
+                {
+                    Message = session.Translation.GetTranslation(TranslationString.FarmPokestopsNoUsableFound)
+                });
             }
+
+            session.EventDispatcher.Send(new PokeStopListEvent {Forts = pokestopList});
 
             while (pokestopList.Any())
             {
@@ -54,56 +63,116 @@ namespace PoGo.NecroBot.Logic.Tasks
                 pokestopList =
                     pokestopList.OrderBy(
                         i =>
-                            LocationUtils.CalculateDistanceInMeters(ctx.Client.CurrentLatitude,
-                                ctx.Client.CurrentLongitude, i.Latitude, i.Longitude)).ToList();
+                            LocationUtils.CalculateDistanceInMeters(session.Client.CurrentLatitude,
+                                session.Client.CurrentLongitude, i.Latitude, i.Longitude)).ToList();
                 var pokeStop = pokestopList[0];
                 pokestopList.RemoveAt(0);
 
-                var distance = LocationUtils.CalculateDistanceInMeters(ctx.Client.CurrentLatitude,
-                    ctx.Client.CurrentLongitude, pokeStop.Latitude, pokeStop.Longitude);
-                var fortInfo = ctx.Client.Fort.GetFort(pokeStop.Id, pokeStop.Latitude, pokeStop.Longitude).Result;
+                var distance = LocationUtils.CalculateDistanceInMeters(session.Client.CurrentLatitude,
+                    session.Client.CurrentLongitude, pokeStop.Latitude, pokeStop.Longitude);
+                var fortInfo = await session.Client.Fort.GetFort(pokeStop.Id, pokeStop.Latitude, pokeStop.Longitude);
 
-                machine.Fire(new FortTargetEvent {Name = fortInfo.Name, Distance = distance});
+                session.EventDispatcher.Send(new FortTargetEvent {Name = fortInfo.Name, Distance = distance});
 
-                ctx.Navigation.HumanLikeWalking(new GeoCoordinate(pokeStop.Latitude, pokeStop.Longitude),
-                    ctx.LogicSettings.WalkingSpeedInKilometerPerHour,
-                    () =>
+                await session.Navigation.HumanLikeWalking(new GeoCoordinate(pokeStop.Latitude, pokeStop.Longitude),
+                    session.LogicSettings.WalkingSpeedInKilometerPerHour,
+                    async () =>
                     {
-                        CatchNearbyPokemonsTask.Execute(ctx, machine);
+                        // Catch normal map Pokemon
+                        await CatchNearbyPokemonsTask.Execute(session);
+                        //Catch Incense Pokemon
+                        await CatchIncensePokemonsTask.Execute(session);
                         return true;
-                    }).Wait();
-
-                var fortSearch = ctx.Client.Fort.SearchFort(pokeStop.Id, pokeStop.Latitude, pokeStop.Longitude).Result;
-                if (fortSearch.ExperienceAwarded > 0)
-                {
-                    machine.Fire(new FortUsedEvent
-                    {
-                        Exp = fortSearch.ExperienceAwarded,
-                        Gems = fortSearch.GemsAwarded,
-                        Items = StringUtils.GetSummedFriendlyNameOfItemAwardList(fortSearch.ItemsAwarded)
                     });
+
+                //Catch Lure Pokemon
+                if (pokeStop.LureInfo != null)
+                {
+                    await CatchLurePokemonsTask.Execute(session, pokeStop);
                 }
 
-                Thread.Sleep(1000);
+                FortSearchResponse fortSearch;
+                var TimesZeroXPawarded = 0;
+                var fortTry = 0;      //Current check
+                const int retryNumber = 50; //How many times it needs to check to clear softban
+                const int zeroCheck = 5; //How many times it checks fort before it thinks it's softban
+                do {
+                    fortSearch = await session.Client.Fort.SearchFort(pokeStop.Id, pokeStop.Latitude, pokeStop.Longitude);
+                    if (fortSearch.ExperienceAwarded > 0 && TimesZeroXPawarded > 0) TimesZeroXPawarded = 0;
+                    if (fortSearch.ExperienceAwarded == 0)
+                    {
+                        TimesZeroXPawarded++;
+
+                        if (TimesZeroXPawarded > zeroCheck)
+                        {
+                            if ((int)fortSearch.CooldownCompleteTimestampMs != 0)
+                            {
+                                break; // Check if successfully looted, if so program can continue as this was "false alarm".
+                            }
+
+                            fortTry += 1;
+
+                            session.EventDispatcher.Send(new FortFailedEvent
+                            {
+                                Name = fortInfo.Name,
+                                Try = fortTry,
+                                Max = retryNumber - zeroCheck
+                            });
+
+                            DelayingUtils.Delay(session.LogicSettings.DelayBetweenPlayerActions, 400);
+                        }
+                    } else {
+                        session.EventDispatcher.Send(new FortUsedEvent
+                        {
+                            Id = pokeStop.Id,
+                            Name = fortInfo.Name,
+                            Exp = fortSearch.ExperienceAwarded,
+                            Gems = fortSearch.GemsAwarded,
+                            Items = StringUtils.GetSummedFriendlyNameOfItemAwardList(fortSearch.ItemsAwarded),
+                            Latitude = pokeStop.Latitude,
+                            Longitude = pokeStop.Longitude,
+                            inventoryFull = (fortSearch.Result == FortSearchResponse.Types.Result.InventoryFull)
+                        });
+
+                        break; //Continue with program as loot was succesfull.
+                    }
+                    } while (fortTry < retryNumber - zeroCheck); //Stop trying if softban is cleaned earlier or if 40 times fort looting failed.
+
+                await Task.Delay(1000);
+
+                await eggWalker.ApplyDistance(distance);
+
                 if (++stopsHit%5 == 0) //TODO: OR item/pokemon bag is full
                 {
                     stopsHit = 0;
-                    RecycleItemsTask.Execute(ctx, machine);
-                    if (ctx.LogicSettings.EvolveAllPokemonWithEnoughCandy || ctx.LogicSettings.EvolveAllPokemonAboveIv)
+                    if (fortSearch.ItemsAwarded.Count > 0)
                     {
-                        EvolvePokemonTask.Execute(ctx, machine);
+                        await session.Inventory.RefreshCachedInventory();
                     }
-                    if (ctx.LogicSettings.TransferDuplicatePokemon)
+                    await RecycleItemsTask.Execute(session);
+                    if (session.LogicSettings.SnipeAtPokestops)
                     {
-                        TransferDuplicatePokemonTask.Execute(ctx, machine);
+                        await SnipePokemonTask.Execute(session);
+                    }
+                    if (session.LogicSettings.EvolveAllPokemonWithEnoughCandy || session.LogicSettings.EvolveAllPokemonAboveIv)
+                    {
+                        await EvolvePokemonTask.Execute(session);
+                    }
+                    if (session.LogicSettings.TransferDuplicatePokemon)
+                    {
+                        await TransferDuplicatePokemonTask.Execute(session);
+                    }
+                    if (session.LogicSettings.RenameAboveIv)
+                    {
+                        await RenamePokemonTask.Execute(session);
                     }
                 }
             }
         }
 
-        private static List<FortData> GetPokeStops(Context ctx)
+        private static async Task<List<FortData>> GetPokeStops(ISession session)
         {
-            var mapObjects = ctx.Client.Map.GetMapObjects().Result;
+            var mapObjects = await session.Client.Map.GetMapObjects();
 
             // Wasn't sure how to make this pretty. Edit as needed.
             var pokeStops = mapObjects.MapCells.SelectMany(i => i.Forts)
@@ -113,9 +182,9 @@ namespace PoGo.NecroBot.Logic.Tasks
                         i.CooldownCompleteTimestampMs < DateTime.UtcNow.ToUnixTime() &&
                         ( // Make sure PokeStop is within max travel distance, unless it's set to 0.
                             LocationUtils.CalculateDistanceInMeters(
-                                ctx.Settings.DefaultLatitude, ctx.Settings.DefaultLongitude,
-                                i.Latitude, i.Longitude) < ctx.LogicSettings.MaxTravelDistanceInMeters) ||
-                        ctx.LogicSettings.MaxTravelDistanceInMeters == 0
+                                session.Settings.DefaultLatitude, session.Settings.DefaultLongitude,
+                                i.Latitude, i.Longitude) < session.LogicSettings.MaxTravelDistanceInMeters) ||
+                        session.LogicSettings.MaxTravelDistanceInMeters == 0
                 );
 
             return pokeStops.ToList();

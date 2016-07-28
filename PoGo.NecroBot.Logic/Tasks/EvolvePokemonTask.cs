@@ -1,9 +1,11 @@
 ﻿#region using directives
 
+using System;
 using System.Linq;
-using System.Threading;
+using System.Threading.Tasks;
 using PoGo.NecroBot.Logic.Event;
 using PoGo.NecroBot.Logic.State;
+using PoGo.NecroBot.Logic.Utils;
 using PokemonGo.RocketAPI;
 using POGOProtos.Inventory.Item;
 
@@ -13,51 +15,64 @@ namespace PoGo.NecroBot.Logic.Tasks
 {
     public class EvolvePokemonTask
     {
-        public static void Execute(Context ctx, StateMachine machine)
+        private static DateTime _lastLuckyEggTime;
+
+        public static async Task Execute(ISession session)
         {
-            if (ctx.LogicSettings.UseLuckyEggsWhileEvolving)
+            var pokemonToEvolveTask = await session.Inventory.GetPokemonToEvolve(session.LogicSettings.PokemonsToEvolve);
+            var pokemonToEvolve = pokemonToEvolveTask.ToList();
+
+            if (pokemonToEvolve.Any())
             {
-                UseLuckyEgg(ctx.Client, ctx.Inventory, machine);
-            }
+                var inventoryContent = await session.Inventory.GetItems();
 
-            var pokemonToEvolveTask = ctx.Inventory.GetPokemonToEvolve(ctx.LogicSettings.PokemonsToEvolve);
-            pokemonToEvolveTask.Wait();
-
-            var pokemonToEvolve = pokemonToEvolveTask.Result;
-            foreach (var pokemon in pokemonToEvolve)
-            {
-                var evolveTask = ctx.Client.Inventory.EvolvePokemon(pokemon.Id);
-                evolveTask.Wait();
-
-                var evolvePokemonOutProto = evolveTask.Result;
-
-                machine.Fire(new PokemonEvolveEvent
+                var luckyEggs = inventoryContent.Where(p => p.ItemId == ItemId.ItemLuckyEgg);
+                var luckyEgg = luckyEggs.FirstOrDefault();
+                
+                //maybe there can be a warning message as an else condition of luckyEgg checks, like; 
+                //"There is no Lucky Egg, so, your UseLuckyEggsMinPokemonAmount setting bypassed."
+                if (session.LogicSettings.UseLuckyEggsWhileEvolving && luckyEgg != null && luckyEgg.Count > 0)
                 {
-                    Id = pokemon.PokemonId,
-                    Exp = evolvePokemonOutProto.ExperienceAwarded,
-                    Result = evolvePokemonOutProto.Result
-                });
+                    if (pokemonToEvolve.Count >= session.LogicSettings.UseLuckyEggsMinPokemonAmount)
+                    {
+                        await UseLuckyEgg(session);
+                    }
+                    else
+                    {
+                        // Wait until we have enough pokemon
+                        return;
+                    }
+                }
 
-                Thread.Sleep(3000);
+                foreach (var pokemon in pokemonToEvolve)
+                {
+                    var evolveResponse = await session.Client.Inventory.EvolvePokemon(pokemon.Id);
+
+                    session.EventDispatcher.Send(new PokemonEvolveEvent
+                    {
+                        Id = pokemon.PokemonId,
+                        Exp = evolveResponse.ExperienceAwarded,
+                        Result = evolveResponse.Result
+                    });
+                }
             }
         }
 
-        public static void UseLuckyEgg(Client client, Inventory inventory, StateMachine machine)
+        public static async Task UseLuckyEgg(ISession session)
         {
-            var inventoryContent = inventory.GetItems().Result;
+            var inventoryContent = await session.Inventory.GetItems();
 
             var luckyEggs = inventoryContent.Where(p => p.ItemId == ItemId.ItemLuckyEgg);
             var luckyEgg = luckyEggs.FirstOrDefault();
 
-            if (luckyEgg == null || luckyEgg.Count <= 0)
+            if (_lastLuckyEggTime.AddMinutes(30).Ticks > DateTime.Now.Ticks)
                 return;
 
-            client.Inventory.UseItemXpBoost().Wait();
-
-            luckyEgg.Count -= 1;
-            machine.Fire(new UseLuckyEggEvent {Count = luckyEgg.Count});
-
-            Thread.Sleep(2000);
+            _lastLuckyEggTime = DateTime.Now;
+            await session.Client.Inventory.UseItemXpBoost();
+            await session.Inventory.RefreshCachedInventory();
+            session.EventDispatcher.Send(new UseLuckyEggEvent {Count = luckyEgg.Count});
+            DelayingUtils.Delay(session.LogicSettings.DelayBetweenPokemonCatch, 2000);
         }
     }
 }

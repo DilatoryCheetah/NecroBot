@@ -1,5 +1,6 @@
 ﻿#region using directives
 
+using System.Threading.Tasks;
 using PoGo.NecroBot.Logic.Tasks;
 
 #endregion
@@ -8,30 +9,38 @@ namespace PoGo.NecroBot.Logic.State
 {
     public class FarmState : IState
     {
-        public IState Execute(Context ctx, StateMachine machine)
+        public async Task<IState> Execute(ISession session)
         {
-            if (ctx.LogicSettings.EvolveAllPokemonAboveIv || ctx.LogicSettings.EvolveAllPokemonWithEnoughCandy)
+            if (session.LogicSettings.EvolveAllPokemonAboveIv || session.LogicSettings.EvolveAllPokemonWithEnoughCandy)
             {
-                EvolvePokemonTask.Execute(ctx, machine);
+                await EvolvePokemonTask.Execute(session);
             }
 
-            if (ctx.LogicSettings.TransferDuplicatePokemon)
+            if (session.LogicSettings.TransferDuplicatePokemon)
             {
-                TransferDuplicatePokemonTask.Execute(ctx, machine);
+                await TransferDuplicatePokemonTask.Execute(session);
             }
 
-            RecycleItemsTask.Execute(ctx, machine);
-
-            if (ctx.LogicSettings.UseGpxPathing)
+            if (session.LogicSettings.RenameAboveIv)
             {
-                FarmPokestopsGpxTask.Execute(ctx, machine);
+                await RenamePokemonTask.Execute(session);
+            }
+
+            await RecycleItemsTask.Execute(session);
+
+            if (session.LogicSettings.UseEggIncubators)
+            {
+                await UseIncubatorsTask.Execute(session);
+            }
+
+            if (session.LogicSettings.UseGpxPathing)
+            {
+                await FarmPokestopsGpxTask.Execute(session);
             }
             else
             {
-                FarmPokestopsTask.Execute(ctx, machine);
+                await FarmPokestopsTask.Execute(session);
             }
-
-            machine.RequestDelay(10000);
 
             return this;
         }

@@ -9,43 +9,48 @@ namespace PoGo.NecroBot.Logic.State
 {
     public class FarmState : IState
     {
-        public async Task<IState> Execute(Context ctx, StateMachine machine)
+        public async Task<IState> Execute(ISession session)
         {
-            await RenamePokemonTask.Execute(ctx, machine);
+            await RenamePokemonTask.Execute(session);
 
-            if (ctx.LogicSettings.EvolveAllPokemonAboveIv || ctx.LogicSettings.EvolveAllPokemonWithEnoughCandy)
+            if (session.LogicSettings.EvolveAllPokemonAboveIv || session.LogicSettings.EvolveAllPokemonWithEnoughCandy)
             {
-                await EvolvePokemonTask.Execute(ctx, machine);
+                await EvolvePokemonTask.Execute(session);
             }
 
-            await RenamePokemonTask.Execute(ctx, machine);
+            await RenamePokemonTask.Execute(session);
 
-            if (ctx.LogicSettings.TransferDuplicatePokemon)
+            if (session.LogicSettings.TransferDuplicatePokemon)
             {
-                await TransferDuplicatePokemonTask.Execute(ctx, machine);
+                await TransferDuplicatePokemonTask.Execute(session);
             }
 
-            if (ctx.LogicSettings.RenameAboveIv)
+            if (session.LogicSettings.RenameAboveIv)
             {
-                await RenamePokemonTask.Execute(ctx, machine);
+                await RenamePokemonTask.Execute(session);
             }
 
-            await RecycleItemsTask.Execute(ctx, machine);
+            await RecycleItemsTask.Execute(session);
 
-            await DisplayPokemonStatsTask.Execute(ctx, machine);
+            await DisplayPokemonStatsTask.Execute(session);
 
-            await DisplayItemsTask.Execute(ctx, machine);
+            await DisplayItemsTask.Execute(session);
 
-            await DisplayPlayerStatsTask.Execute(ctx, machine);
+            await DisplayPlayerStatsTask.Execute(session);
 
-            if (ctx.LogicSettings.ExecuteFarming)
-                if (ctx.LogicSettings.UseGpxPathing)
+            if (session.LogicSettings.ExecuteFarming)
+                if (session.LogicSettings.UseEggIncubators)
                 {
-                    await FarmPokestopsGpxTask.Execute(ctx, machine);
+                    await UseIncubatorsTask.Execute(session);
+                }
+
+                if (session.LogicSettings.UseGpxPathing)
+                {
+                    await FarmPokestopsGpxTask.Execute(session);
                 }
                 else
                 {
-                    await FarmPokestopsTask.Execute(ctx, machine);
+                    await FarmPokestopsTask.Execute(session);
                 }
 
             return this;

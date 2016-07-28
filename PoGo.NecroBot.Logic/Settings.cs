@@ -99,11 +99,14 @@ namespace PoGo.NecroBot.CLI
         public bool UseEggIncubators = true;
         public bool DumpPokemonStats = false;
         public string GpxFile = "GPXPath.GPX";
+        public bool RecycleItems = true;
+        public bool ExecuteFarming = true;
         public bool UseGpxPathing = false;
         public double WalkingSpeedInKilometerPerHour = 15.0;
         public int MaxTravelDistanceInMeters = 1000;
         public int KeepMinCp = 1250;
         public int KeepMinDuplicatePokemon = 1;
+        public int KeepMaxDuplicatePokemon = 100;
         public float KeepMinIvPercentage = 95;
         public bool KeepPokemonsThatCanEvolve = false;
         public bool PrioritizeIvOverCp = true;
@@ -478,6 +481,7 @@ namespace PoGo.NecroBot.CLI
         public int DelayBetweenPlayerActions => _settings.DelayBetweenPlayerActions;
         public bool UsePokemonToNotCatchFilter => _settings.UsePokemonToNotCatchFilter;
         public int KeepMinDuplicatePokemon => _settings.KeepMinDuplicatePokemon;
+        public int KeepMaxDuplicatePokemon => _settings.KeepMaxDuplicatePokemon;
         public bool PrioritizeIvOverCp => _settings.PrioritizeIvOverCp;
         public int MaxTravelDistanceInMeters => _settings.MaxTravelDistanceInMeters;
         public string GpxFile => _settings.GpxFile;
@@ -488,6 +492,8 @@ namespace PoGo.NecroBot.CLI
         public float EvolveAboveIvValue => _settings.EvolveAboveIvValue;
         public bool RenameAboveIv => _settings.RenameAboveIv;
         public int AmountOfPokemonToDisplayOnStart => _settings.AmountOfPokemonToDisplayOnStart;
+        public bool RecycleItems => _settings.RecycleItems;
+        public bool ExecuteFarming => _settings.ExecuteFarming;
         public bool DumpPokemonStats => _settings.DumpPokemonStats;
         public string TranslationLanguageCode => _settings.TranslationLanguageCode;
         public ICollection<KeyValuePair<ItemId, int>> ItemRecycleFilter => _settings.ItemRecycleFilter;

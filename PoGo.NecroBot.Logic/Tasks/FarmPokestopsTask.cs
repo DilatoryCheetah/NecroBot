@@ -139,10 +139,10 @@ namespace PoGo.NecroBot.Logic.Tasks
                     } while (fortTry < retryNumber - zeroCheck); //Stop trying if softban is cleaned earlier or if 40 times fort looting failed.
 
                 await Task.Delay(1000);
-
                 await eggWalker.ApplyDistance(distance);
 
-                if (++stopsHit%5 == 0) //TODO: OR item/pokemon bag is full
+                var rnd = new Random();
+                if (++stopsHit % 5 == 0 && rnd.Next(0, 3) == 0) //TODO: OR item/pokemon bag is full
                 {
                     stopsHit = 0;
                     if (fortSearch.ItemsAwarded.Count > 0)

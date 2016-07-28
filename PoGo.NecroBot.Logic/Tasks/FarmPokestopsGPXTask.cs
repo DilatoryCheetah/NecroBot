@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using PoGo.NecroBot.Logic.Event;
+using PoGo.NecroBot.Logic.Logging;
 using PoGo.NecroBot.Logic.State;
 using PoGo.NecroBot.Logic.Utils;
 using PokemonGo.RocketAPI.Extensions;
@@ -42,6 +43,8 @@ namespace PoGo.NecroBot.Logic.Tasks
                             session.Client.CurrentLongitude, Convert.ToDouble(nextPoint.Lat, CultureInfo.InvariantCulture),
                             Convert.ToDouble(nextPoint.Lon, CultureInfo.InvariantCulture));
 
+                        Logger.Write($"Walking to point {curTrkPt+1} of {maxTrkPt+1}. Distance: {distance}, Lat: {nextPoint.Lat}, Lon: {nextPoint.Lon}", LogLevel.Farming);
+
                         if (distance > 5000)
                         {
                             session.EventDispatcher.Send(new ErrorEvent
@@ -51,68 +54,79 @@ namespace PoGo.NecroBot.Logic.Tasks
                             break;
                         }
 
-                        var pokestopList = await GetPokeStops(session);
-                        session.EventDispatcher.Send(new PokeStopListEvent {Forts = pokestopList});
-
-                        while (pokestopList.Any())
+                        if (session.LogicSettings.WalkingSpeedInKilometerPerHour < 1000)
                         {
-                            pokestopList =
-                                pokestopList.OrderBy(
-                                    i =>
-                                        LocationUtils.CalculateDistanceInMeters(session.Client.CurrentLatitude,
-                                            session.Client.CurrentLongitude, i.Latitude, i.Longitude)).ToList();
-                            var pokeStop = pokestopList[0];
-                            pokestopList.RemoveAt(0);
+                            var pokestopList = await GetPokeStops(session);
+                            session.EventDispatcher.Send(new PokeStopListEvent {Forts = pokestopList});
 
-                            var fortInfo = await session.Client.Fort.GetFort(pokeStop.Id, pokeStop.Latitude, pokeStop.Longitude);
-
-                            if (pokeStop.LureInfo != null)
+                            while (pokestopList.Any())
                             {
-                                await CatchLurePokemonsTask.Execute(session, pokeStop);
-                            }
+                                pokestopList =
+                                    pokestopList.OrderBy(
+                                        i =>
+                                            LocationUtils.CalculateDistanceInMeters(session.Client.CurrentLatitude,
+                                                session.Client.CurrentLongitude, i.Latitude, i.Longitude)).ToList();
+                                var pokeStop = pokestopList[0];
+                                pokestopList.RemoveAt(0);
 
-                            var fortSearch =
-                                await session.Client.Fort.SearchFort(pokeStop.Id, pokeStop.Latitude, pokeStop.Longitude);
+                                var fortInfo = await session.Client.Fort.GetFort(pokeStop.Id, pokeStop.Latitude, pokeStop.Longitude);
 
-                            if (fortSearch.ExperienceAwarded > 0)
-                            {
-                                session.EventDispatcher.Send(new FortUsedEvent
+                                if (pokeStop.LureInfo != null)
                                 {
-                                    Id = pokeStop.Id,
-                                    Name = fortInfo.Name,
-                                    Exp = fortSearch.ExperienceAwarded,
-                                    Gems = fortSearch.GemsAwarded,
-                                    Items = StringUtils.GetSummedFriendlyNameOfItemAwardList(fortSearch.ItemsAwarded),
-                                    Latitude = pokeStop.Latitude,
-                                    Longitude = pokeStop.Longitude
-                                });
-                            }
-                            if (fortSearch.ItemsAwarded.Count > 0)
-                            {
-                                await session.Inventory.RefreshCachedInventory();
-                            }
+                                    await CatchLurePokemonsTask.Execute(session, pokeStop);
+                                }
 
-                            await RecycleItemsTask.Execute(session);
+                                var fortSearch =
+                                    await session.Client.Fort.SearchFort(pokeStop.Id, pokeStop.Latitude, pokeStop.Longitude);
 
-                            if (session.LogicSettings.SnipeAtPokestops)
-                            {
-                                await SnipePokemonTask.Execute(session);
-                            }
+                                if (fortSearch.ExperienceAwarded > 0)
+                                {
+                                    session.EventDispatcher.Send(new FortUsedEvent
+                                    {
+                                        Id = pokeStop.Id,
+                                        Name = fortInfo.Name,
+                                        Exp = fortSearch.ExperienceAwarded,
+                                        Gems = fortSearch.GemsAwarded,
+                                        Items = StringUtils.GetSummedFriendlyNameOfItemAwardList(fortSearch.ItemsAwarded),
+                                        Latitude = pokeStop.Latitude,
+                                        Longitude = pokeStop.Longitude
+                                    });
+                                }
+                                if (fortSearch.ItemsAwarded.Count > 0)
+                                {
+                                    await session.Inventory.RefreshCachedInventory();
+                                }
 
-                            if (session.LogicSettings.EvolveAllPokemonWithEnoughCandy ||
-                                session.LogicSettings.EvolveAllPokemonAboveIv)
-                            {
-                                await EvolvePokemonTask.Execute(session);
-                            }
+                                await Task.Delay(1000);
 
-                            if (session.LogicSettings.TransferDuplicatePokemon)
-                            {
-                                await TransferDuplicatePokemonTask.Execute(session);
-                            }
+                                await RecycleItemsTask.Execute(session);
 
-                            if (session.LogicSettings.RenameAboveIv)
-                            {
-                                await RenamePokemonTask.Execute(session);
+                                var rnd = new Random();
+                                if (rnd.Next(0, 15) == 0) //TODO: OR item/pokemon bag is full
+                                { 
+                                    if (session.LogicSettings.SnipeAtPokestops)
+                                    {
+                                        await SnipePokemonTask.Execute(session);
+                                    }
+
+                                    await RecycleItemsTask.Execute(session);
+
+                                    if (session.LogicSettings.EvolveAllPokemonWithEnoughCandy ||
+                                        session.LogicSettings.EvolveAllPokemonAboveIv)
+                                    {
+                                        await EvolvePokemonTask.Execute(session);
+                                    }
+
+                                    if (session.LogicSettings.TransferDuplicatePokemon)
+                                    {
+                                        await TransferDuplicatePokemonTask.Execute(session);
+                                    }
+                                }
+
+                                if (session.LogicSettings.RenameAboveIv)
+                                {
+                                    await RenamePokemonTask.Execute(session);
+                                }
                             }
                         }
 
@@ -121,8 +135,11 @@ namespace PoGo.NecroBot.Logic.Tasks
                             {
                                 await CatchNearbyPokemonsTask.Execute(session);
                                 //Catch Incense Pokemon
-                                await CatchIncensePokemonsTask.Execute(session);
-                                await UseNearbyPokestopsTask.Execute(session);
+                                if (session.LogicSettings.WalkingSpeedInKilometerPerHour < 1000)
+                                {
+                                    await CatchIncensePokemonsTask.Execute(session);
+                                    await UseNearbyPokestopsTask.Execute(session);
+                                }
                                 return true;
                             }
                             );
@@ -130,7 +147,31 @@ namespace PoGo.NecroBot.Logic.Tasks
                         await eggWalker.ApplyDistance(distance);
 
                         if (curTrkPt >= maxTrkPt)
+                        {
                             curTrkPt = 0;
+
+                            await RenamePokemonTask.Execute(session);
+
+                            if (session.LogicSettings.EvolveAllPokemonAboveIv || session.LogicSettings.EvolveAllPokemonWithEnoughCandy)
+                            {
+                                await EvolvePokemonTask.Execute(session);
+                            }
+
+                            await RenamePokemonTask.Execute(session);
+
+                            if (session.LogicSettings.TransferDuplicatePokemon)
+                            {
+                                await TransferDuplicatePokemonTask.Execute(session);
+                            }
+
+                            await RecycleItemsTask.Execute(session);
+
+                            await DisplayPokemonStatsTask.Execute(session);
+
+                            await DisplayItemsTask.Execute(session);
+
+                            await DisplayPlayerStatsTask.Execute(session);
+                        }
                         else
                             curTrkPt++;
                     } //end trkpts

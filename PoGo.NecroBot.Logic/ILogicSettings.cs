@@ -73,6 +73,7 @@ namespace PoGo.NecroBot.Logic
         int DelayBetweenPlayerActions { get; }
         bool UsePokemonToNotCatchFilter { get; }
         int KeepMinDuplicatePokemon { get; }
+        int KeepMaxDuplicatePokemon { get; }
         bool PrioritizeIvOverCp { get; }
         int MaxTravelDistanceInMeters { get; }
         bool UseGpxPathing { get; }
@@ -84,6 +85,8 @@ namespace PoGo.NecroBot.Logic
         bool DumpPokemonStats { get; }
         bool RenameAboveIv { get; }
         int AmountOfPokemonToDisplayOnStart { get; }
+        bool RecycleItems { get; }
+        bool ExecuteFarming { get; }
         string TranslationLanguageCode { get; }
         string ProfilePath { get; }
         string ProfileConfigPath { get; }

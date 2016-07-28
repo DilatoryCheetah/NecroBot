@@ -15,16 +15,21 @@ namespace PoGo.NecroBot.Logic.Tasks
         {
             var items = await session.Inventory.GetItemsToRecycle(session.Settings);
 
-            foreach (var item in items)
+            if (session.LogicSettings.RecycleItems)
             {
-                await session.Client.Inventory.RecycleItem(item.ItemId, item.Count);
+                foreach (var item in items)
+                {
+                    await session.Client.Inventory.RecycleItem(item.ItemId, item.Count);
 
-                session.EventDispatcher.Send(new ItemRecycledEvent {Id = item.ItemId, Count = item.Count});
+                    session.EventDispatcher.Send(new ItemRecycledEvent { Id = item.ItemId, Count = item.Count });
+
+                    await Task.Delay(500);
+                }
+
+                await session.Inventory.RefreshCachedInventory();
 
                 DelayingUtils.Delay(session.LogicSettings.DelayBetweenPlayerActions, 500);
             }
-
-            await session.Inventory.RefreshCachedInventory();
         }
     }
 }

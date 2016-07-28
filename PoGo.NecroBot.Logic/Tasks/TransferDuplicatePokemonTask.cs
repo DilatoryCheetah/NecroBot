@@ -24,11 +24,23 @@ namespace PoGo.NecroBot.Logic.Tasks
             var pokemonSettings = await session.Inventory.GetPokemonSettings();
             var pokemonFamilies = await session.Inventory.GetPokemonFamilies();
 
+            int pokemonCount = 0;
+            POGOProtos.Enums.PokemonId pokemonId = POGOProtos.Enums.PokemonId.Missingno;
             foreach (var duplicatePokemon in duplicatePokemons)
             {
-                if (duplicatePokemon.Cp >= session.Inventory.GetPokemonTransferFilter(duplicatePokemon.PokemonId).KeepMinCp ||
+                if (duplicatePokemon.PokemonId != pokemonId)
+                {
+                    pokemonId = duplicatePokemon.PokemonId;
+                    pokemonCount = 1;
+                }
+                else
+                {
+                    pokemonCount++;
+                }
+                if ((pokemonCount < (session.LogicSettings.KeepMaxDuplicatePokemon - session.LogicSettings.KeepMinDuplicatePokemon)) && 
+                    (duplicatePokemon.Cp >= session.Inventory.GetPokemonTransferFilter(duplicatePokemon.PokemonId).KeepMinCp ||
                     PokemonInfo.CalculatePokemonPerfection(duplicatePokemon) >
-                    session.Inventory.GetPokemonTransferFilter(duplicatePokemon.PokemonId).KeepMinIvPercentage)
+                    session.Inventory.GetPokemonTransferFilter(duplicatePokemon.PokemonId).KeepMinIvPercentage))
                 {
                     continue;
                 }

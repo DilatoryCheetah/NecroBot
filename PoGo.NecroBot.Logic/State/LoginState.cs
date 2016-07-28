@@ -27,7 +27,7 @@ namespace PoGo.NecroBot.Logic.State
                     case AuthType.Ptc:
                         try
                         {
-                            await session.Client.Login.DoPtcLogin();
+                            await session.Client.Login.DoPtcLogin(session.Settings.PtcUsername, session.Settings.PtcPassword);
                         }
                         catch (AggregateException ae)
                         {
@@ -35,7 +35,7 @@ namespace PoGo.NecroBot.Logic.State
                         }
                         break;
                     case AuthType.Google:
-                        await session.Client.Login.DoGoogleLogin();
+                        await session.Client.Login.DoGoogleLogin(session.Settings.GoogleUsername, session.Settings.GooglePassword);
                         break;
                     default:
                         session.EventDispatcher.Send(new ErrorEvent { Message = session.Translation.GetTranslation(Common.TranslationString.WrongAuthType) });
@@ -57,27 +57,27 @@ namespace PoGo.NecroBot.Logic.State
                 session.EventDispatcher.Send(new ErrorEvent { Message = session.Translation.GetTranslation(TranslationString.AccountNotVerified) });
                 await Task.Delay(2000);
                 Environment.Exit(0);
-            //}
-            //catch (GoogleException e)
-            //{
-            //    if (e.Message.Contains("NeedsBrowser"))
-            //    {
-            //        session.EventDispatcher.Send(new ErrorEvent { Message = session.Translation.GetTranslation(TranslationString.GoogleTwoFactorAuth) });
-            //        session.EventDispatcher.Send(new ErrorEvent { Message = session.Translation.GetTranslation(TranslationString.GoogleTwoFactorAuthExplanation) });
-            //        await Task.Delay(7000);
-            //        try
-            //        {
-            //            System.Diagnostics.Process.Start("https://security.google.com/settings/security/apppasswords");
-            //        }
-            //        catch (Exception)
-            //        {
-            //            session.EventDispatcher.Send(new ErrorEvent { Message = "https://security.google.com/settings/security/apppasswords" });
-            //            throw;
-            //        }
-            //    }
-            //    session.EventDispatcher.Send(new ErrorEvent { Message = session.Translation.GetTranslation(TranslationString.GoogleError) });
-            //    await Task.Delay(2000);
-            //    Environment.Exit(0);
+            }
+            catch (GoogleException e)
+            {
+                if (e.Message.Contains("NeedsBrowser"))
+                {
+                    session.EventDispatcher.Send(new ErrorEvent { Message = session.Translation.GetTranslation(TranslationString.GoogleTwoFactorAuth) });
+                    session.EventDispatcher.Send(new ErrorEvent { Message = session.Translation.GetTranslation(TranslationString.GoogleTwoFactorAuthExplanation) });
+                    await Task.Delay(7000);
+                    try
+                    {
+                        System.Diagnostics.Process.Start("https://security.google.com/settings/security/apppasswords");
+                    }
+                    catch (Exception)
+                    {
+                        session.EventDispatcher.Send(new ErrorEvent { Message = "https://security.google.com/settings/security/apppasswords" });
+                        throw;
+                    }
+                }
+                session.EventDispatcher.Send(new ErrorEvent { Message = session.Translation.GetTranslation(TranslationString.GoogleError) });
+                await Task.Delay(2000);
+                Environment.Exit(0);
             }
 
             await DownloadProfile(session);

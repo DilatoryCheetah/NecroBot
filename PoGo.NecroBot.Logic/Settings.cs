@@ -109,6 +109,8 @@ namespace PoGo.NecroBot.CLI
         public bool EvolveAllPokemonAboveIv = false;
         public bool EvolveAllPokemonWithEnoughCandy = false;
         public string GpxFile = "GPXPath.GPX";
+        public bool RecycleItems = true;
+        public bool ExecuteFarming = true;
 
         public List<KeyValuePair<ItemId, int>> ItemRecycleFilter = new List<KeyValuePair<ItemId, int>>
         {
@@ -146,6 +148,7 @@ namespace PoGo.NecroBot.CLI
 
         public int KeepMinCp = 1000;
         public int KeepMinDuplicatePokemon = 1;
+        public int KeepMaxDuplicatePokemon = 100;
         public float KeepMinIvPercentage = 95;
         public bool KeepPokemonsThatCanEvolve = false;
         public int MaxTravelDistanceInMeters = 1000;

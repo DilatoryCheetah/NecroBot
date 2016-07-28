@@ -4,6 +4,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using PoGo.NecroBot.Logic.Event;
+using PoGo.NecroBot.Logic.Logging;
 using PoGo.NecroBot.Logic.PoGoUtils;
 using PoGo.NecroBot.Logic.State;
 
@@ -29,6 +30,9 @@ namespace PoGo.NecroBot.Logic.Tasks
             var allPokemons = myPokemons.OrderBy(x => x.PokemonId.ToString()).ThenByDescending(PokemonInfo.CalculatePokemonPerfection).ThenByDescending(x => x.Cp);
 
             var pokemonPairedWithStatsName = allPokemons.Select(pokemon => Tuple.Create(pokemon, PokemonInfo.CalculateMaxCp(pokemon), PokemonInfo.CalculatePokemonPerfection(pokemon), PokemonInfo.GetLevel(pokemon))).ToList();
+
+            int maxPokemonStorage = await session.Inventory.GetMaxPokemonStorage();
+            Logger.Write($"Total number of Pokemon in inventory: {myPokemons.Count(),4:###0}/{maxPokemonStorage,4:###0}", LogLevel.Info, ConsoleColor.Yellow);
 
             session.EventDispatcher.Send(
                 new DisplayHighestsPokemonEvent
@@ -56,7 +60,6 @@ namespace PoGo.NecroBot.Logic.Tasks
                 });
 
             await Task.Delay(500);
-
         }
     }
 }

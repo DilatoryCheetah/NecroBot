@@ -1,5 +1,6 @@
 ﻿#region using directives
 
+using System;
 using System.Threading.Tasks;
 using PoGo.NecroBot.Logic.Tasks;
 
@@ -25,11 +26,6 @@ namespace PoGo.NecroBot.Logic.State
                 await TransferDuplicatePokemonTask.Execute(session);
             }
 
-            if (session.LogicSettings.RenameAboveIv)
-            {
-                await RenamePokemonTask.Execute(session);
-            }
-
             await RecycleItemsTask.Execute(session);
 
             await DisplayPokemonStatsTask.Execute(session);
@@ -39,6 +35,7 @@ namespace PoGo.NecroBot.Logic.State
             await DisplayPlayerStatsTask.Execute(session);
 
             if (session.LogicSettings.ExecuteFarming)
+            {
                 if (session.LogicSettings.UseEggIncubators)
                 {
                     await UseIncubatorsTask.Execute(session);
@@ -52,6 +49,10 @@ namespace PoGo.NecroBot.Logic.State
                 {
                     await FarmPokestopsTask.Execute(session);
                 }
+            }
+            else
+                Environment.Exit(0);
+
 
             return this;
         }

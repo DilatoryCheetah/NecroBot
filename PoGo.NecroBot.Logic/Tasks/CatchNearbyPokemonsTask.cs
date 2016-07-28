@@ -6,6 +6,7 @@ using PoGo.NecroBot.Logic.Event;
 using PoGo.NecroBot.Logic.Logging;
 using PoGo.NecroBot.Logic.State;
 using PoGo.NecroBot.Logic.Utils;
+using POGOProtos.Inventory.Item;
 using POGOProtos.Map.Pokemon;
 using POGOProtos.Networking.Responses;
 
@@ -20,10 +21,13 @@ namespace PoGo.NecroBot.Logic.Tasks
             Logger.Write(session.Translation.GetTranslation(Common.TranslationString.LookingForPokemon), LogLevel.Debug);
 
             var pokemons = await GetNearbyPokemons(session);
+            var pokeBallsCount = await session.Inventory.GetItemAmountByType(ItemId.ItemPokeBall);
+
             foreach (var pokemon in pokemons)
             {
                 if (session.LogicSettings.UsePokemonToNotCatchFilter &&
-                    session.LogicSettings.PokemonsNotToCatch.Contains(pokemon.PokemonId))
+                    session.LogicSettings.PokemonsNotToCatch.Contains(pokemon.PokemonId) &&
+                    pokeBallsCount < 50)
                 {
                     Logger.Write(session.Translation.GetTranslation(Common.TranslationString.PokemonSkipped, pokemon.PokemonId));
                     continue;

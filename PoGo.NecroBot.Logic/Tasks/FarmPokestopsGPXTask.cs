@@ -43,7 +43,7 @@ namespace PoGo.NecroBot.Logic.Tasks
                             session.Client.CurrentLongitude, Convert.ToDouble(nextPoint.Lat, CultureInfo.InvariantCulture),
                             Convert.ToDouble(nextPoint.Lon, CultureInfo.InvariantCulture));
 
-                        Logger.Write($"Walking to point {curTrkPt+1} of {maxTrkPt}. Distance: {distance}, Lat: {nextPoint.Lat}, Lon: {nextPoint.Lon}", LogLevel.Farming);
+                        Logger.Write($"Walking to point {curTrkPt+1} of {maxTrkPt+1}. Distance: {distance}, Lat: {nextPoint.Lat}, Lon: {nextPoint.Lon}", LogLevel.Farming);
 
                         if (distance > 5000)
                         {
@@ -97,11 +97,6 @@ namespace PoGo.NecroBot.Logic.Tasks
 
                             await RecycleItemsTask.Execute(session);
 
-                            if (session.LogicSettings.UseEggIncubators)
-                            {
-                                await UseIncubatorsTask.Execute(session);
-                            }
-
                             var rnd = new Random();
                             if (rnd.Next(0, 15) == 0) //TODO: OR item/pokemon bag is full
                             { 
@@ -139,7 +134,31 @@ namespace PoGo.NecroBot.Logic.Tasks
                         await eggWalker.ApplyDistance(distance);
 
                         if (curTrkPt >= maxTrkPt)
+                        {
                             curTrkPt = 0;
+
+                            await RenamePokemonTask.Execute(session);
+
+                            if (session.LogicSettings.EvolveAllPokemonAboveIv || session.LogicSettings.EvolveAllPokemonWithEnoughCandy)
+                            {
+                                await EvolvePokemonTask.Execute(session);
+                            }
+
+                            await RenamePokemonTask.Execute(session);
+
+                            if (session.LogicSettings.TransferDuplicatePokemon)
+                            {
+                                await TransferDuplicatePokemonTask.Execute(session);
+                            }
+
+                            await RecycleItemsTask.Execute(session);
+
+                            await DisplayPokemonStatsTask.Execute(session);
+
+                            await DisplayItemsTask.Execute(session);
+
+                            await DisplayPlayerStatsTask.Execute(session);
+                        }
                         else
                             curTrkPt++;
                     } //end trkpts

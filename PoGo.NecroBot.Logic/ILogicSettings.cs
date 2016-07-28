@@ -9,6 +9,38 @@ using POGOProtos.Inventory.Item;
 
 namespace PoGo.NecroBot.Logic
 {
+    public class Location
+    {
+        public Location()
+        {
+        }
+
+        public Location(double latitude, double longitude)
+        {
+            Latitude = latitude;
+            Longitude = longitude;
+        }
+
+        public double Latitude { get; set; }
+        public double Longitude { get; set; }
+    }
+
+    public class SnipeSettings
+    {
+        public SnipeSettings()
+        {
+        }
+
+        public SnipeSettings(List<Location> locations, List<string> pokemon)
+        {
+            Locations = locations;
+            Pokemon = pokemon;
+        }
+
+        public List<Location> Locations { get; set; }
+        public List<string> Pokemon { get; set; }
+    }
+
     public class TransferFilter
     {
         public TransferFilter()
@@ -38,6 +70,7 @@ namespace PoGo.NecroBot.Logic
         bool TransferDuplicatePokemon { get; }
         bool UseEggIncubators { get; }
         int DelayBetweenPokemonCatch { get; }
+        int DelayBetweenPlayerActions { get; }
         bool UsePokemonToNotCatchFilter { get; }
         int KeepMinDuplicatePokemon { get; }
         int KeepMaxDuplicatePokemon { get; }
@@ -58,6 +91,7 @@ namespace PoGo.NecroBot.Logic
         string ProfilePath { get; }
         string ProfileConfigPath { get; }
         string GeneralConfigPath { get; }
+        bool SnipeAtPokestops { get; }
 
         ICollection<KeyValuePair<ItemId, int>> ItemRecycleFilter { get; }
 
@@ -68,6 +102,7 @@ namespace PoGo.NecroBot.Logic
         ICollection<PokemonId> PokemonsNotToCatch { get; }
 
         Dictionary<PokemonId, TransferFilter> PokemonsTransferFilter { get; }
+        SnipeSettings PokemonToSnipe { get; } 
 
         bool StartupWelcomeDelay { get; }
     }

@@ -55,6 +55,7 @@ namespace PoGo.NecroBot.Logic.State
             catch (AccountNotVerifiedException)
             {
                 session.EventDispatcher.Send(new ErrorEvent { Message = session.Translation.GetTranslation(TranslationString.AccountNotVerified) });
+                await Task.Delay(2000);
                 Environment.Exit(0);
             }
             catch (GoogleException e)
@@ -75,6 +76,7 @@ namespace PoGo.NecroBot.Logic.State
                     }
                 }
                 session.EventDispatcher.Send(new ErrorEvent { Message = session.Translation.GetTranslation(TranslationString.GoogleError) });
+                await Task.Delay(2000);
                 Environment.Exit(0);
             }
 
@@ -85,24 +87,24 @@ namespace PoGo.NecroBot.Logic.State
 
         private static async Task CheckLogin(ISession session)
         {
-            if (session.Client.AuthType == AuthType.Google &&
+            if (session.Settings.AuthType == AuthType.Google &&
                             (session.Settings.GoogleUsername == null || session.Settings.GooglePassword == null))
             {
                 session.EventDispatcher.Send(new ErrorEvent
                 {
                     Message = session.Translation.GetTranslation(TranslationString.MissingCredentialsGoogle)
                 });
-                await Task.Delay(1000);
+                await Task.Delay(2000);
                 Environment.Exit(0);
             }
-            else if (session.Client.AuthType == AuthType.Ptc &&
+            else if (session.Settings.AuthType == AuthType.Ptc &&
                      (session.Settings.PtcUsername == null || session.Settings.PtcPassword == null))
             {
                 session.EventDispatcher.Send(new ErrorEvent
                 {
                     Message = session.Translation.GetTranslation(TranslationString.MissingCredentialsPtc)
                 });
-                await Task.Delay(1000);
+                await Task.Delay(2000);
                 Environment.Exit(0);
             }
         }

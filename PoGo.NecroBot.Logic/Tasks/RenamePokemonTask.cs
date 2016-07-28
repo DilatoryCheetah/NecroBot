@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using PoGo.NecroBot.Logic.Event;
 using PoGo.NecroBot.Logic.PoGoUtils;
 using PoGo.NecroBot.Logic.State;
+using PoGo.NecroBot.Logic.Utils;
 
 #endregion
 
@@ -51,6 +52,8 @@ namespace PoGo.NecroBot.Logic.Tasks
                     {
                         Message = session.Translation.GetTranslation(Common.TranslationString.PokemonRename, pokemon.PokemonId, pokemon.Id, pokemon.Nickname, newNickname)
                     });
+
+                    DelayingUtils.Delay(session.LogicSettings.DelayBetweenPlayerActions, 0);
                 }
                 else if (newNickname == pokemon.Nickname && !session.LogicSettings.RenameAboveIv)
                 {
@@ -60,6 +63,8 @@ namespace PoGo.NecroBot.Logic.Tasks
                     {
                         Message = session.Translation.GetTranslation(Common.TranslationString.PokemonRename, pokemon.PokemonId, pokemon.Id, pokemon.Nickname, pokemon.PokemonId)
                     });
+
+                    DelayingUtils.Delay(session.LogicSettings.DelayBetweenPlayerActions, 0);
                 }
             }
 

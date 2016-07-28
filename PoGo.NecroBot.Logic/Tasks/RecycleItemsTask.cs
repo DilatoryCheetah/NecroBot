@@ -22,7 +22,7 @@ namespace PoGo.NecroBot.Logic.Tasks
 
                     machine.Fire(new ItemRecycledEvent { Id = item.ItemId, Count = item.Count });
 
-                    Thread.Sleep(500);
+                    await Task.Delay(500);
                 }
 
                 await ctx.Inventory.RefreshCachedInventory();

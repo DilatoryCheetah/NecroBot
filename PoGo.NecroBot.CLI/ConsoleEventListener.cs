@@ -170,7 +170,7 @@ namespace PoGo.NecroBot.CLI
             Logger.Write($"====== {strHeader} ======", LogLevel.Info, ConsoleColor.Yellow);
             foreach (var pokemon in evt.PokemonList)
                 Logger.Write(
-                    $"# CP {pokemon.Item1.Cp,4:###0}/{pokemon.Item2,4:###0} | ({pokemon.Item3,6:##0.00}% {strPerfect})\t| Lvl {pokemon.Item4,2:#0}\t {strName}: '{pokemon.Item1.PokemonId.ToString().PadRight(11, ' ')' | {pokemon.Item1.Nickname}",
+                    $"# CP {pokemon.Item1.Cp,4:###0}/{pokemon.Item2,4:###0} | ({pokemon.Item3,6:##0.00}% {strPerfect}) [{pokemon.Item1.IndividualAttack,2:#0}/{pokemon.Item1.IndividualDefense,2:#0}/{pokemon.Item1.IndividualStamina,2:#0}] | Lvl {pokemon.Item4,2:#0} | {strName}: {pokemon.Item1.PokemonId.ToString().PadRight(13, ' ')} | {pokemon.Item1.Nickname}",
                     LogLevel.Info, ConsoleColor.Yellow);
         }
 

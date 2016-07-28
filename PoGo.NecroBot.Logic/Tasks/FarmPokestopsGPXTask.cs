@@ -7,6 +7,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using PoGo.NecroBot.Logic.Event;
+using PoGo.NecroBot.Logic.Logging;
 using PoGo.NecroBot.Logic.State;
 using PoGo.NecroBot.Logic.Utils;
 using PokemonGo.RocketAPI.Extensions;
@@ -40,6 +41,8 @@ namespace PoGo.NecroBot.Logic.Tasks
                         var distance = LocationUtils.CalculateDistanceInMeters(ctx.Client.CurrentLatitude,
                             ctx.Client.CurrentLongitude, Convert.ToDouble(nextPoint.Lat, CultureInfo.InvariantCulture),
                             Convert.ToDouble(nextPoint.Lon, CultureInfo.InvariantCulture));
+
+                        Logger.Write($"Walking to point {curTrkPt+1} of {maxTrkPt}. Distance: {distance}, Lat: {nextPoint.Lat}, Lon: {nextPoint.Lon}", LogLevel.Farming);
 
                         if (distance > 5000)
                         {
